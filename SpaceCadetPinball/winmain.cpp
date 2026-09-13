@@ -835,6 +835,26 @@ void winmain::RenderUi()
 	gdrv::grtext_draw_ttext_in_box();
 }
 
+// Miyoo Mini patch: this hardware has 4 shoulder buttons (L1/R1/L2/R2), but
+// the game's own key binding UI only lets one physical key drive each
+// action. Make L2 mimic whatever key L1 sends, and R2 mimic R1, so both
+// pairs can trigger the same flipper without needing a second binding.
+static SDL_Keycode miyooRemapKeycode(SDL_Keycode sym)
+{
+        if (sym == SDLK_TAB) // L2
+                return SDLK_e; // same keycode L1 sends
+        if (sym == SDLK_BACKSPACE) // R2
+                return SDLK_t; // same keycode R1 sends
+	if (sym == SDLK_ESCAPE) { SDL_Event quitEvent{SDL_QUIT}; SDL_PushEvent(&quitEvent); return sym; } // Menu key: sair direto
+	if (sym == SDLK_RCTRL) return SDLK_F2; // Select: novo jogo
+	if (sym == SDLK_LCTRL) return SDLK_SPACE; // B: lancar bola (igual A)
+	if (sym == SDLK_LEFT) return SDLK_x; // D-pad esquerda: balancar mesa esquerda
+	if (sym == SDLK_LSHIFT) return SDLK_F5; // X: liga/desliga efeitos sonoros
+	if (sym == SDLK_RIGHT) return SDLK_PERIOD; // D-pad direita: balancar mesa direita
+	if (sym == SDLK_RETURN) return SDLK_F3; // Start: pausar/continuar
+        return sym;
+}
+
 int winmain::event_handler(const SDL_Event* event)
 {
 	auto inputDown = false;
@@ -897,13 +917,13 @@ int winmain::event_handler(const SDL_Event* event)
 		return_value = 0;
 		return 0;
 	case SDL_KEYUP:
-		pb::InputUp({InputTypes::Keyboard, event->key.keysym.sym});
+		pb::InputUp({InputTypes::Keyboard, miyooRemapKeycode(event->key.keysym.sym)});
 		break;
 	case SDL_KEYDOWN:
 		if (event->key.repeat)
 			break;
 
-		pb::InputDown({InputTypes::Keyboard, event->key.keysym.sym});
+		pb::InputDown({InputTypes::Keyboard, miyooRemapKeycode(event->key.keysym.sym)});
 		if (!pb::cheat_mode)
 			break;
 

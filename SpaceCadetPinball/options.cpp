@@ -24,14 +24,14 @@ optionsStruct options::Options
 		{
 			"Left Flipper key",
 			Msg::KEYMAPPER_FlipperL,
-			{InputTypes::Keyboard, SDLK_z},
+			{InputTypes::Keyboard, SDLK_e}, // Miyoo Mini: L1
 			{InputTypes::Mouse, SDL_BUTTON_LEFT},
 			{InputTypes::GameController, SDL_CONTROLLER_BUTTON_LEFTSHOULDER}
 		},
 		{
 			"Right Flipper key",
 			Msg::KEYMAPPER_FlipperR,
-			{InputTypes::Keyboard, SDLK_SLASH},
+			{InputTypes::Keyboard, SDLK_t}, // Miyoo Mini: R1
 			{InputTypes::Mouse,SDL_BUTTON_RIGHT},
 			{InputTypes::GameController, SDL_CONTROLLER_BUTTON_RIGHTSHOULDER}
 		},
