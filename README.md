@@ -134,8 +134,12 @@ these come from).
   game's existing keyboard-based control scheme, plus a direct-quit shortcut bypassing a broken
   ImGui confirmation dialog on this hardware (see Known issues).
 - **`SpaceCadetPinball/options.cpp`** — changed the default key bindings for Left Flipper and
-  Right Flipper to match keys this hardware can actually produce (see Known issues below for
-  why).
+  Right Flipper to match keys this hardware can actually produce, and defaulted `ShowMenu` to
+  `false` (see Known issues below for why).
+- **`SpaceCadetPinball/TPlunger.cpp`** — widened the plunger's post-release collision window
+  from 25ms to 150ms. On this hardware's slower/less consistent update rate, a fully charged
+  shot would often do nothing because the ball was no longer touching the plunger by the time
+  the original, much shorter window closed.
 
 ## Known issues
 
@@ -145,11 +149,12 @@ these come from).
   ship this; sound effects work normally.
 - **The game's built-in top menu bar and its ImGui-based dialogs (Show Control Dialog, the Exit
   confirmation popup) don't render/interact correctly on this hardware** — likely a rendering
-  pipeline incompatibility between ImGui and this device's software-rendering SDL2 build. We
-  worked around this by hardcoding sensible default key bindings and a direct-quit shortcut
-  instead of relying on these menus. This also means **in-game key rebinding doesn't work** on
-  this device — if you want to change the controls, you'll need to edit and recompile
-  `winmain.cpp`'s `miyooRemapKeycode()` function.
+  pipeline incompatibility between ImGui and this device's software-rendering SDL2 build.
+  Showing the top menu bar also visibly shrinks/corrupts the play area, so `ShowMenu` is
+  defaulted to `false` to avoid it entirely. We worked around the rest by hardcoding sensible
+  default key bindings and a direct-quit shortcut instead of relying on these menus. This also
+  means **in-game key rebinding doesn't work** on this device — if you want to change the
+  controls, you'll need to edit and recompile `winmain.cpp`'s `miyooRemapKeycode()` function.
 - **First-run settings caching**: this game saves its settings (including key bindings) to
   `Roms/PORTS/Games/Pinball/.local/share/SpaceCadetPinball/imgui_pb.ini` after the first launch.
   If you rebuild with different default key bindings, delete this file (or the whole `.local`
