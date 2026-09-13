@@ -130,7 +130,7 @@ optionsStruct options::Options
 	{"Linear Filtering", true},
 	{"Frames Per Second", DefFps},
 	{"Updates Per Second", DefUps},
-	{"ShowMenu", true},
+	{"ShowMenu", false},
 	{"Uncapped Updates Per Second", false},
 	{"Sound Channels", DefSoundChannels},
 	{"HybridSleep", false},

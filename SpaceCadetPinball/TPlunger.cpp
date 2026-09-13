@@ -133,7 +133,7 @@ int TPlunger::Message(MessageCode code, float value)
 			PullbackTimer_ = 0;
 			loader::play_sound(SoundIndexP2, this, "TPlunger3");
 			SpriteSet(0);
-			timer::set(PullbackDelay, this, ReleasedTimer);
+			timer::set(0.15f, this, ReleasedTimer);
 		}
 		break;
 	case MessageCode::Reset:
