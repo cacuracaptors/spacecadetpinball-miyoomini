@@ -83,6 +83,30 @@ Some notes:
    If not, use "refresh roms" at the bottom of the list.
 5. The first launch will take a few minutes while the music is converted (see [Music](#music)).
 
+## Known issues
+
+- **The first launch takes a few minutes** while the music is converted. This is one-time; see
+  [Music](#music).
+- **The game's built-in top menu bar and its ImGui-based dialogs (Show Control Dialog, the Exit
+  confirmation popup) don't render/interact correctly on this hardware** — likely a rendering
+  pipeline incompatibility between ImGui and this device's software-rendering SDL2 build.
+  Showing the top menu bar also visibly shrinks/corrupts the play area, so `ShowMenu` is
+  defaulted to `false` to avoid it entirely. We worked around the rest by hardcoding sensible
+  default key bindings and a direct-quit shortcut instead of relying on these menus. This also
+  means **in-game key rebinding doesn't work** on this device — if you want to change the
+  controls, you'll need to edit and recompile `winmain.cpp`'s `miyooRemapKeycode()` function.
+- **First-run settings caching**: this game saves its settings (including key bindings) to
+  `Roms/PORTS/Games/Pinball/.local/share/SpaceCadetPinball/imgui_pb.ini` after the first launch.
+  If you rebuild with different default key bindings, delete this file (or the whole `.local` folder) before testing, or the old saved settings will silently override your new defaults.
+
+## Changelog
+
+- **v1.1.0** — Background music now works. `PINBALL.MID` is converted to OGG Vorbis on the device,
+  automatically, the first time you launch the game (see [Music](#music)). Added **Y** to toggle
+  music. The Menu key now quits on release instead of press, so the OnionOS Menu+Power screenshot
+  combo works without quitting the game first.
+- **v1.0.0** — Initial release.
+
 ## Building from source
 
 This port requires cross-compiling for ARMv7 hard-float using a Docker-based toolchain. Tested
@@ -175,30 +199,6 @@ rather than for ARM, since it runs during the build itself.
   the original, much shorter window closed.
 - **`pinball-launcher.sh`** (shipped in the release, not a source change) — runs in place of the
   game executable and performs the one-time MIDI→OGG music conversion described in [Music](#music).
-
-## Known issues
-
-- **The first launch takes a few minutes** while the music is converted. This is one-time; see
-  [Music](#music).
-- **The game's built-in top menu bar and its ImGui-based dialogs (Show Control Dialog, the Exit
-  confirmation popup) don't render/interact correctly on this hardware** — likely a rendering
-  pipeline incompatibility between ImGui and this device's software-rendering SDL2 build.
-  Showing the top menu bar also visibly shrinks/corrupts the play area, so `ShowMenu` is
-  defaulted to `false` to avoid it entirely. We worked around the rest by hardcoding sensible
-  default key bindings and a direct-quit shortcut instead of relying on these menus. This also
-  means **in-game key rebinding doesn't work** on this device — if you want to change the
-  controls, you'll need to edit and recompile `winmain.cpp`'s `miyooRemapKeycode()` function.
-- **First-run settings caching**: this game saves its settings (including key bindings) to
-  `Roms/PORTS/Games/Pinball/.local/share/SpaceCadetPinball/imgui_pb.ini` after the first launch.
-  If you rebuild with different default key bindings, delete this file (or the whole `.local` folder) before testing, or the old saved settings will silently override your new defaults.
-
-## Changelog
-
-- **v1.1.0** — Background music now works. `PINBALL.MID` is converted to OGG Vorbis on the device,
-  automatically, the first time you launch the game (see [Music](#music)). Added **Y** to toggle
-  music. The Menu key now quits on release instead of press, so the OnionOS Menu+Power screenshot
-  combo works without quitting the game.
-- **v1.0.0** — Initial release.
 
 ## Credits
 
