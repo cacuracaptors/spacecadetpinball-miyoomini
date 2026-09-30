@@ -384,6 +384,7 @@ void winmain::MainLoop()
 				// Todo: remove original clear, if save for all platforms
 				SDL_RenderFillRect(Renderer, nullptr);
 				render::PresentVScreen();
+				high_score::MiyooDrawOverlay(); // Miyoo Mini patch: High Scores table
 
 				ImGui::Render();
 				ImGui_Render_RenderDrawData(ImGui::GetDrawData());
@@ -858,8 +859,55 @@ static SDL_Keycode miyooRemapKeycode(SDL_Keycode sym)
         return sym;
 }
 
+// Miyoo Mini patch: the High Scores window is driven by the buttons (see
+// high_score::MiyooKeyDown). A key pressed while it is open also has its
+// release swallowed, even if the window has closed by then, so the button that
+// closes it (A, Start...) does not reach the game when it is released.
+static std::vector<SDL_Keycode> MiyooSwallowedUps;
+
 int winmain::event_handler(const SDL_Event* event)
 {
+	if (event->type == SDL_KEYUP)
+	{
+		auto sym = event->key.keysym.sym;
+		auto it = std::find(MiyooSwallowedUps.begin(), MiyooSwallowedUps.end(), sym);
+		if (it != MiyooSwallowedUps.end())
+		{
+			MiyooSwallowedUps.erase(it);
+			return 1;
+		}
+	}
+	if (high_score::MiyooDialogActive())
+	{
+		switch (event->type)
+		{
+		case SDL_KEYDOWN:
+			{
+				auto sym = event->key.keysym.sym;
+				if (!event->key.repeat)
+					MiyooSwallowedUps.push_back(sym);
+				if (!event->key.repeat || sym == SDLK_UP || sym == SDLK_DOWN)
+					high_score::MiyooKeyDown(sym);
+				return 1;
+			}
+		case SDL_KEYUP:
+			{
+				// A key pressed before the window opened: a flipper held at that
+				// moment still has to come down. The Menu key does nothing while
+				// the window is open (screenshots with Menu+Power keep working).
+				auto sym = event->key.keysym.sym;
+				if (sym == SDLK_e || sym == SDLK_t || sym == SDLK_TAB || sym == SDLK_BACKSPACE)
+					pb::InputUp({InputTypes::Keyboard, miyooRemapKeycode(sym)});
+				return 1;
+			}
+		case SDL_TEXTINPUT:
+		case SDL_TEXTEDITING:
+			return 1;
+		default:
+			break;
+		}
+	}
+
 	auto inputDown = false;
 	switch (event->type)
 	{
@@ -937,6 +985,18 @@ int winmain::event_handler(const SDL_Event* event)
 		// where Escape would pause instead.
 		if (event->key.keysym.sym == SDLK_ESCAPE)
 			break;
+
+		// Miyoo Mini patch: D-pad Down opens the High Scores table (on PC it is
+		// in the menu bar, which is hidden here). A running game is paused.
+		if (event->key.keysym.sym == SDLK_DOWN)
+		{
+			if (HighScoresEnabled)
+			{
+				pause(false);
+				pb::high_scores();
+			}
+			break;
+		}
 
 		pb::InputDown({InputTypes::Keyboard, miyooRemapKeycode(event->key.keysym.sym)});
 		if (!pb::cheat_mode)

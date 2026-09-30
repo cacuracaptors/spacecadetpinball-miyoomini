@@ -29,6 +29,8 @@ legitimate copy of these files and must provide them yourself. See [Installation
   (see [Controls](#controls))
 - Sound effects working
 - **Background music working**, converted automatically on first launch (see [Music](#music))
+- **High Scores**: see the table any time with D-pad Down, and type your name with the buttons
+  when you set a new record (see [High Scores](#high-scores))
 - The Menu key fires on **release**, not on press, so the OnionOS Menu+Power screenshot combo
   won't quit the game before you can take the screenshot
 
@@ -42,11 +44,37 @@ legitimate copy of these files and must provide them yourself. See [Installation
 | D-pad Up            | Nudge table (bottom)   |
 | D-pad Left          | Nudge table (left)     |
 | D-pad Right         | Nudge table (right)    |
+| D-pad Down          | High Scores table      |
 | X                   | Toggle sound effects   |
 | Y                   | Toggle music           |
 | Start               | Pause / Resume         |
 | Select              | New game               |
 | Menu key (Function) | Exit the game          |
+
+## High Scores
+
+The game keeps the original top-5 High Scores table. On PC it is shown in a window of the game's
+menu bar, which doesn't work on this device (see [Known issues](#known-issues)), so this port
+draws the table by itself, with the game's own font.
+
+- Press **D-pad Down** at any time to see the table. A running game is paused; press **Start**
+  to resume after closing it. Close the table with **A**, **B**, **Start** or **D-pad Down**.
+  **Select** asks whether to clear the table (**A**: yes, **B**: no).
+- When a game ends with a new record, the table opens by itself so you can type your name, the
+  same way as in the Fallout ports:
+  - **D-pad Up/Down**: choose the letter (shown in yellow)
+  - **D-pad Left**: switch between upper and lower case
+  - **D-pad Right**: add a space
+  - **A**: keep the letter and move to the next one
+  - **B**: erase
+  - **Start**: save
+- The name starts with the last one you typed, so you don't have to spell it out every time.
+  Saving an empty name keeps the game's default ("Player 1").
+- A new record is written to the SD card as soon as you save it, not only when the game closes.
+- The Menu key does nothing while the table is open, so the OnionOS Menu+Power screenshot combo
+  works on it.
+- Your scores live in `Roms/PORTS/Games/Pinball/.local/share/SpaceCadetPinball/imgui_pb.ini`.
+  Keep that file (or the whole `.local` folder) when you update or reinstall the port.
 
 ## Music
 
@@ -92,15 +120,21 @@ Some notes:
   pipeline incompatibility between ImGui and this device's software-rendering SDL2 build.
   Showing the top menu bar also visibly shrinks/corrupts the play area, so `ShowMenu` is
   defaulted to `false` to avoid it entirely. We worked around the rest by hardcoding sensible
-  default key bindings and a direct-quit shortcut instead of relying on these menus. This also
+  default key bindings and a direct-quit shortcut instead of relying on these menus. The High Scores
+  table is drawn by this port itself instead (see [High Scores](#high-scores)). This also
   means **in-game key rebinding doesn't work** on this device — if you want to change the
   controls, you'll need to edit and recompile `winmain.cpp`'s `miyooRemapKeycode()` function.
 - **First-run settings caching**: this game saves its settings (including key bindings) to
   `Roms/PORTS/Games/Pinball/.local/share/SpaceCadetPinball/imgui_pb.ini` after the first launch.
-  If you rebuild with different default key bindings, delete this file (or the whole `.local` folder) before testing, or the old saved settings will silently override your new defaults.
+  If you rebuild with different default key bindings, delete this file (or the whole `.local` folder) before testing, or the old saved settings will silently override your new defaults. Note that this file
+  also holds your High Scores.
 
 ## Changelog
 
+- **v1.2.0** — **High Scores**: D-pad Down shows the table, and when a game ends with a new
+  record you can type your name with the buttons. The game's own window for this never showed up
+  on this device, so every record used to be saved as "Player 1". Records are now written to the
+  SD card right away. See [High Scores](#high-scores).
 - **v1.1.0** — Background music now works. `PINBALL.MID` is converted to OGG Vorbis on the device,
   automatically, the first time you launch the game (see [Music](#music)). Added **Y** to toggle
   music. The Menu key now quits on release instead of press, so the OnionOS Menu+Power screenshot
@@ -197,6 +231,11 @@ rather than for ARM, since it runs during the build itself.
   from 25ms to 150ms. On this hardware's slower/less consistent update rate, a fully charged
   shot would often do nothing because the ball was no longer touching the plunger by the time
   the original, much shorter window closed.
+- **`SpaceCadetPinball/high_score.cpp` / `high_score.h`** — the High Scores table is drawn with
+  the game's own bitmap font (`MiyooDrawOverlay()`), in place of the ImGui window that doesn't
+  show up on this device; name entry with the D-pad and face buttons; the `.ini` is saved right
+  after a new record. `winmain.cpp` opens the table with D-pad Down and routes the buttons to it
+  while it is open.
 - **`pinball-launcher.sh`** (shipped in the release, not a source change) — runs in place of the
   game executable and performs the one-time MIDI→OGG music conversion described in [Music](#music).
 

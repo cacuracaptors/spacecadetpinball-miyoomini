@@ -25,6 +25,14 @@ public:
 	static void show_high_score_dialog();
 	static void show_and_set_high_score_dialog(high_score_entry score);
 	static void RenderHighScoreDialog();
+
+	// Miyoo Mini patch: the device has no keyboard, and the game's ImGui
+	// windows do not show up on its screen. The High Scores table is drawn by
+	// MiyooDrawOverlay() with the game's own font, and driven by the buttons
+	// (called from winmain).
+	static bool MiyooDialogActive();
+	static void MiyooKeyDown(int sym);
+	static void MiyooDrawOverlay();
 private:
 	static bool dlg_enter_name;
 	static high_score_entry DlgData;
