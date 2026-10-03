@@ -33,6 +33,7 @@ public:
 	static bool MiyooDialogActive();
 	static void MiyooKeyDown(int sym);
 	static void MiyooDrawOverlay();
+	static int MiyooOverlayVersion();
 private:
 	static bool dlg_enter_name;
 	static high_score_entry DlgData;

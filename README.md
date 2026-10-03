@@ -25,6 +25,8 @@ legitimate copy of these files and must provide them yourself. See [Installation
 ## Features
 
 - Software rendering (the Miyoo Mini Plus has no 3D GPU)
+- **Light on the battery**: a frame is only drawn when something on screen changes, so a paused
+  game uses about a quarter of the CPU it used to
 - A full control scheme adapted for the Miyoo Mini Plus' hardware, which has no analog sticks
   (see [Controls](#controls))
 - Sound effects working
@@ -116,8 +118,8 @@ Some notes:
 - **The first launch takes a few minutes** while the music is converted. This is one-time; see
   [Music](#music).
 - **The game's built-in top menu bar and its ImGui-based dialogs (Show Control Dialog, the Exit
-  confirmation popup) don't render/interact correctly on this hardware** — likely a rendering
-  pipeline incompatibility between ImGui and this device's software-rendering SDL2 build.
+  confirmation popup) don't render/interact correctly on this hardware** — this device's SDL2 build
+  doesn't implement drawing triangles or filled rectangles, which is all ImGui draws with.
   Showing the top menu bar also visibly shrinks/corrupts the play area, so `ShowMenu` is
   defaulted to `false` to avoid it entirely. We worked around the rest by hardcoding sensible
   default key bindings and a direct-quit shortcut instead of relying on these menus. The High Scores
@@ -131,6 +133,12 @@ Some notes:
 
 ## Changelog
 
+- **v1.2.1** — **Lighter on the battery**, with the same speed and picture. A frame is now only
+  drawn and sent to the screen when something on it changed (the ball, a light, the score, the
+  High Scores box), plus a refresh 4 times a second. Measured on the device: about 6% of one CPU
+  core while paused (was 21%), 7% with the High Scores table open (was 26%) and 24% while playing
+  (was 30%), and the CPU spends more time at a lower clock. The picture is also handed straight
+  to the device's SDL2, which saves copying the whole screen once per frame.
 - **v1.2.0** — **High Scores**: D-pad Down shows the table, and when a game ends with a new
   record you can type your name with the buttons. The game's own window for this never showed up
   on this device, so every record used to be saved as "Player 1". Records are now written to the
@@ -236,6 +244,12 @@ rather than for ARM, since it runs during the build itself.
   show up on this device; name entry with the D-pad and face buttons; the `.ini` is saved right
   after a new record. `winmain.cpp` opens the table with D-pad Down and routes the buttons to it
   while it is open.
+- **`SpaceCadetPinball/render.cpp` / `render.h`, `gdrv.cpp`, `zdrv.cpp`** — every drawing function
+  that writes to the screen buffer sets `render::MiyooDirty`, and `winmain.cpp` only draws and
+  presents a frame when it is set or the High Scores box changed, plus a refresh 4 times a second
+  so anything OnionOS draws over the game goes away. `PresentVScreen()` hands the screen buffer to
+  `SDL_UpdateTexture` instead of copying it into the texture: this device's SDL2 keeps the
+  pointer and copies from it when the texture is drawn.
 - **`pinball-launcher.sh`** (shipped in the release, not a source change) — runs in place of the
   game executable and performs the one-time MIDI→OGG music conversion described in [Music](#music).
 

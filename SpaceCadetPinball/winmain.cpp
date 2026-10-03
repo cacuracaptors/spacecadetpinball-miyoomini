@@ -379,17 +379,39 @@ void winmain::MainLoop()
 				ImGui::NewFrame();
 				RenderUi();
 
-				SDL_RenderClear(Renderer);
-				// Alternative clear hack, clear might fail on some systems
-				// Todo: remove original clear, if save for all platforms
-				SDL_RenderFillRect(Renderer, nullptr);
-				render::PresentVScreen();
-				high_score::MiyooDrawOverlay(); // Miyoo Mini patch: High Scores table
+				// Miyoo Mini patch: only draw and present a frame when the picture
+				// changed (the table, the High Scores box), plus a refresh 4 times a
+				// second so anything OnionOS drew over the game (volume bar) goes
+				// away. Paused, or with the table still, this saves almost all the
+				// CPU the game uses. During play the ball moves every frame, so
+				// nothing changes there. ImGui still runs its frame every time
+				// (the High Scores logic lives in RenderUi).
+				static Uint32 MiyooLastPresent = 0;
+				static int MiyooLastOverlay = -1;
+				auto miyooNow = SDL_GetTicks();
+				auto miyooOverlay = high_score::MiyooOverlayVersion();
+				if (render::MiyooDirty || miyooOverlay != MiyooLastOverlay || miyooNow - MiyooLastPresent >= 250)
+				{
+					render::MiyooDirty = false;
+					MiyooLastOverlay = miyooOverlay;
+					MiyooLastPresent = miyooNow;
 
-				ImGui::Render();
-				ImGui_Render_RenderDrawData(ImGui::GetDrawData());
+					SDL_RenderClear(Renderer);
+					// Alternative clear hack, clear might fail on some systems
+					// Todo: remove original clear, if save for all platforms
+					SDL_RenderFillRect(Renderer, nullptr);
+					render::PresentVScreen();
+					high_score::MiyooDrawOverlay(); // Miyoo Mini patch: High Scores table
 
-				SDL_RenderPresent(Renderer);
+					ImGui::Render();
+					ImGui_Render_RenderDrawData(ImGui::GetDrawData());
+
+					SDL_RenderPresent(Renderer);
+				}
+				else
+				{
+					ImGui::Render();
+				}
 				frameCounter++;
 				UpdateToFrameCounter -= UpdateToFrameRatio;
 			}

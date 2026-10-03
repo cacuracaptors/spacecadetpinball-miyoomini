@@ -141,6 +141,7 @@ static int MiyooCycle = 0;
 static bool MiyooLower = false;
 static bool MiyooConfirmClear = false;
 static char MiyooDefaultName[32];
+static int MiyooVersion = 0; // changes whenever the box looks different
 
 static char MiyooCurrentChar()
 {
@@ -163,10 +164,18 @@ bool high_score::MiyooDialogActive()
 	return ShowDialog || MiyooOpen;
 }
 
+int high_score::MiyooOverlayVersion()
+{
+	// The blinking cursor changes the picture twice a second
+	auto blink = MiyooOpen && dlg_enter_name && !MiyooPreview ? static_cast<int>((SDL_GetTicks() / 500) % 2) : 0;
+	return MiyooVersion * 2 + blink;
+}
+
 void high_score::MiyooKeyDown(int sym)
 {
 	if (!MiyooOpen)
 		return; // the table opens on the next frame
+	MiyooVersion++;
 
 	if (!dlg_enter_name)
 	{
@@ -479,6 +488,7 @@ void high_score::RenderHighScoreDialog()
 				DlgData.Entry.Name[MiyooMaxNameLen] = 0;
 			}
 			MiyooOpen = true;
+			MiyooVersion++;
 		}
 	}
 
@@ -526,10 +536,12 @@ void high_score::RenderHighScoreDialog()
 		clear_table();
 		MiyooSaveToDisk();
 		MiyooConfirmClear = false;
+		MiyooVersion++;
 	}
 
 	if (!MiyooOpen)
 	{
+		MiyooVersion++;
 		delete MiyooBox; // frees its texture too
 		MiyooBox = nullptr;
 		MiyooBoxKey.clear();

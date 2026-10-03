@@ -53,6 +53,11 @@ public:
 	static void build_occlude_list();
 	static void SpriteViewer(bool* show);
 	static void PresentVScreen();
+
+	// Miyoo Mini patch: set by every drawing function that writes to the
+	// vscreen; a frame is only sent to the screen when it is set (see winmain).
+	static bool MiyooDirty;
+	static void MiyooMarkDirty(const gdrv_bitmap8* bmp) { if (bmp == vscreen) MiyooDirty = true; }
 private:
 	static std::vector<render_sprite*> sprite_list, ball_list;
 	static int offset_x, offset_y;

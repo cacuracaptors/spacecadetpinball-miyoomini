@@ -15,6 +15,7 @@ std::vector<render_sprite*> render::sprite_list, render::ball_list;
 zmap_header_type* render::background_zmap;
 int render::zmap_offsetX, render::zmap_offsetY, render::offset_x, render::offset_y;
 rectangle_type render::vscreen_rect;
+bool render::MiyooDirty = true; // Miyoo Mini patch
 gdrv_bitmap8 *render::vscreen, *render::background_bitmap, *render::ball_bitmap[20];
 zmap_header_type* render::zscreen;
 SDL_Rect render::DestinationRect{};
@@ -140,6 +141,7 @@ void render::uninit()
 void render::recreate_screen_texture()
 {
 	vscreen->CreateTexture(options::Options.LinearFiltering ? "linear" : "nearest", SDL_TEXTUREACCESS_STREAMING);
+	MiyooDirty = true; // Miyoo Mini patch
 }
 
 void render::update()
@@ -319,6 +321,7 @@ void render::shift(int offsetX, int offsetY)
 {
 	offset_x += offsetX;
 	offset_y += offsetY;
+	MiyooDirty = true; // Miyoo Mini patch: the table moved (nudge)
 }
 
 void render::build_occlude_list()
@@ -454,7 +457,12 @@ void render::SpriteViewer(bool* show)
 
 void render::PresentVScreen()
 {
-	vscreen->BlitToTexture();
+	// Miyoo Mini patch: this device's SDL2 does not copy the pixels given to
+	// SDL_UpdateTexture; it keeps the pointer and copies straight from it to
+	// the screen when the texture is drawn. Pointing the texture at the
+	// vscreen saves copying the whole picture once per frame (~1.1 ms).
+	// Elsewhere SDL_UpdateTexture just copies, which is also correct.
+	SDL_UpdateTexture(vscreen->Texture, nullptr, vscreen->BmpBufPtr1, vscreen->Stride * static_cast<int>(sizeof(ColorRgba)));
 
 	if (offset_x == 0 && offset_y == 0)
 	{

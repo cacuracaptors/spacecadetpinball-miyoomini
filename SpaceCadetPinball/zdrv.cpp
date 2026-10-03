@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "zdrv.h"
 #include "winmain.h"
+#include "render.h" // Miyoo Mini patch: render::MiyooMarkDirty
 
 
 zmap_header_type::zmap_header_type(int width, int height, int stride)
@@ -47,6 +48,7 @@ void zdrv::paint(int width, int height, gdrv_bitmap8* dstBmp, int dstBmpXOff, in
                  int dstZMapXOff, int dstZMapYOff, gdrv_bitmap8* srcBmp, int srcBmpXOff, int srcBmpYOff,
                  zmap_header_type* srcZMap, int srcZMapXOff, int srcZMapYOff)
 {
+	render::MiyooMarkDirty(dstBmp); // Miyoo Mini patch
 	assertm(srcBmp->BitmapType != BitmapTypes::Spliced, "Wrong bmp type");
 
 	auto srcPtr = &srcBmp->BmpBufPtr1[srcBmp->Stride * srcBmpYOff + srcBmpXOff];
@@ -80,6 +82,7 @@ void zdrv::paint_flat(int width, int height, gdrv_bitmap8* dstBmp, int dstBmpXOf
                       zmap_header_type* zMap, int dstZMapXOff, int dstZMapYOff, gdrv_bitmap8* srcBmp, int srcBmpXOff,
                       int srcBmpYOff, uint16_t depth)
 {
+	render::MiyooMarkDirty(dstBmp); // Miyoo Mini patch
 	assertm(srcBmp->BitmapType != BitmapTypes::Spliced, "Wrong bmp type");
 
 	auto dstPtr = &dstBmp->BmpBufPtr1[dstBmp->Stride * dstBmpYOff + dstBmpXOff];
