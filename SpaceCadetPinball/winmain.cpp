@@ -12,6 +12,47 @@
 #include "translations.h"
 #include "font_selection.h"
 
+// Miyoo Mini patch: Menu key combos. The Menu key quits when released, unless
+// another button was pressed while it was held: Menu+Start toggles the demo
+// (the computer plays by itself), and Menu+Power (OnionOS screenshot) or any
+// other combo no longer quits the game. Power and the volume keys never reach
+// SDL on this device, so the key devices are also read directly (reading them
+// does not take the keys away from SDL or OnionOS).
+#include <fcntl.h>
+#include <unistd.h>
+#include <linux/input.h>
+static bool MiyooMenuCombo = false;
+
+// Returns true if a button other than Menu was pressed since the last call.
+static bool MiyooOtherKeyPressed()
+{
+	static int fds[10];
+	static bool opened = false;
+	if (!opened)
+	{
+		opened = true;
+		for (int i = 0; i < 10; i++)
+		{
+			char path[32];
+			snprintf(path, sizeof path, "/dev/input/event%d", i);
+			fds[i] = open(path, O_RDONLY | O_NONBLOCK | O_CLOEXEC);
+		}
+	}
+	auto pressed = false;
+	for (auto fd : fds)
+	{
+		if (fd < 0)
+			continue;
+		input_event ev;
+		while (read(fd, &ev, sizeof ev) == static_cast<ssize_t>(sizeof ev))
+		{
+			if (ev.type == EV_KEY && ev.value == 1 && ev.code != KEY_ESC)
+				pressed = true;
+		}
+	}
+	return pressed;
+}
+
 constexpr const char* winmain::Version;
 
 SDL_Window* winmain::MainWindow = nullptr;
@@ -992,6 +1033,12 @@ int winmain::event_handler(const SDL_Event* event)
 	case SDL_KEYUP:
 		if (event->key.keysym.sym == SDLK_ESCAPE)
 		{
+			// Miyoo Mini patch: no quitting after a Menu combo (Menu+Start,
+			// Menu+Power screenshot...)
+			if (MiyooOtherKeyPressed())
+				MiyooMenuCombo = true;
+			if (MiyooMenuCombo)
+				break;
 			SDL_Event quitEvent{SDL_QUIT};
 			SDL_PushEvent(&quitEvent);
 			break;
@@ -1006,7 +1053,27 @@ int winmain::event_handler(const SDL_Event* event)
 		// above). Swallow the key press so it does not reach the game,
 		// where Escape would pause instead.
 		if (event->key.keysym.sym == SDLK_ESCAPE)
+		{
+			// Miyoo Mini patch: start watching for a Menu combo
+			MiyooOtherKeyPressed(); // forget older presses
+			MiyooMenuCombo = false;
 			break;
+		}
+
+		// Miyoo Mini patch: a button pressed while Menu is held is a combo, so
+		// releasing Menu will not quit. Menu+Start toggles the demo mode, and
+		// that Start is not seen by the game (it would pause it).
+		if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_ESCAPE])
+		{
+			MiyooMenuCombo = true;
+			if (event->key.keysym.sym == SDLK_RETURN)
+			{
+				MiyooSwallowedUps.push_back(SDLK_RETURN);
+				end_pause();
+				pb::toggle_demo();
+				break;
+			}
+		}
 
 		// Miyoo Mini patch: D-pad Down opens the High Scores table (on PC it is
 		// in the menu bar, which is hidden here). A running game is paused.

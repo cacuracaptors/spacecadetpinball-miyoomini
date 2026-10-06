@@ -33,8 +33,10 @@ legitimate copy of these files and must provide them yourself. See [Installation
 - **Background music working**, converted automatically on first launch (see [Music](#music))
 - **High Scores**: see the table any time with D-pad Down, and type your name with the buttons
   when you set a new record (see [High Scores](#high-scores))
-- The Menu key fires on **release**, not on press, so the OnionOS Menu+Power screenshot combo
-  won't quit the game before you can take the screenshot
+- **Demo mode**: press Menu+Start and the computer plays by itself, for when you just want to
+  watch (Menu+Start again, or Select, to stop)
+- The Menu key quits when **released**, and only if no other button was pressed while it was
+  held, so Menu+Start and the OnionOS Menu+Power screenshot combo don't quit the game
 
 ## Controls
 
@@ -52,6 +54,7 @@ legitimate copy of these files and must provide them yourself. See [Installation
 | Start               | Pause / Resume         |
 | Select              | New game               |
 | Menu key (Function) | Exit the game          |
+| Menu + Start        | Demo mode (on / off)   |
 
 ## High Scores
 
@@ -133,6 +136,11 @@ Some notes:
 
 ## Changelog
 
+- **v1.3.0** — **Demo mode**: Menu+Start makes the computer play by itself (Menu+Start again,
+  or Select, to stop). The Menu key no longer quits the game when another button was pressed
+  while it was held, so the OnionOS Menu+Power screenshot combo works during play. The right
+  panel's messages now name the Miyoo buttons: "Game Paused / Press Start" and "Select Starts
+  New Game" (they said F3 and F2). New artwork for the OnionOS Ports list.
 - **v1.2.1** — **Lighter on the battery**, with the same speed and picture. A frame is now only
   drawn and sent to the screen when something on it changed (the ball, a light, the score, the
   High Scores box), plus a refresh 4 times a second. Measured on the device: about 6% of one CPU
@@ -230,8 +238,13 @@ rather than for ARM, since it runs during the build itself.
   (`miyooRemapKeycode()`), translating this device's fixed hardware→keycode mapping onto the
   game's existing keyboard-based control scheme, plus a direct-quit shortcut bypassing a broken
   ImGui confirmation dialog on this hardware (see Known issues). The Menu key's quit fires on key
-  release rather than key press, so the OnionOS Menu+Power screenshot combo doesn't quit the game
-  before Power can be pressed.
+  release rather than key press, and not at all if another button was pressed while it was held
+  (Power and the volume keys never reach SDL on this device, so `/dev/input/event*` is also read
+  while Menu is held). Menu+Start toggles the demo mode (`pb::toggle_demo()`, the PC menu's
+  Demo).
+- **`SpaceCadetPinball/translations.cpp`** — the English right-panel messages name the Miyoo
+  buttons instead of PC keys: "Game Paused / Press Start" (was F3) and "Select Starts New Game"
+  (was F2).
 - **`SpaceCadetPinball/options.cpp`** — changed the default key bindings for Left Flipper and
   Right Flipper to match keys this hardware can actually produce, and defaulted `ShowMenu` to
   `false` (see Known issues below for why).
