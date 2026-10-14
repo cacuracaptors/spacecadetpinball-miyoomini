@@ -9,6 +9,7 @@
 #include "render.h"
 #include "fullscrn.h"
 #include "winmain.h"
+#include "miyoo_state.h"
 
 bool high_score::dlg_enter_name;
 bool high_score::ShowDialog = false;
@@ -18,6 +19,7 @@ high_score_struct high_score::highscore_table[5];
 
 int high_score::read()
 {
+	miyoo_state::NormalHeap miyooHeap; // Miyoo Mini patch: never in a save state
 	char Buffer[20];
 
 	int checkSum = 0;
@@ -49,6 +51,7 @@ int high_score::read()
 
 int high_score::write()
 {
+	miyoo_state::NormalHeap miyooHeap; // Miyoo Mini patch: never in a save state
 	char Buffer[20];
 
 	int checkSum = 0;
@@ -76,6 +79,7 @@ int high_score::write()
 
 void high_score::clear_table()
 {
+	miyoo_state::NormalHeap miyooHeap; // Miyoo Mini patch: never in a save state
 	for (auto& table : highscore_table)
 	{
 		table.Score = -999;
@@ -98,6 +102,7 @@ int high_score::get_score_position(int score)
 
 void high_score::place_new_score_into(high_score_entry data)
 {
+	miyoo_state::NormalHeap miyooHeap; // Miyoo Mini patch: never in a save state
 	if (data.Position >= 0 && data.Position < 5)
 	{
 		for (int i = 4; i > data.Position; i--)
@@ -112,11 +117,13 @@ void high_score::place_new_score_into(high_score_entry data)
 
 void high_score::show_high_score_dialog()
 {
+	miyoo_state::NormalHeap miyooHeap; // Miyoo Mini patch: never in a save state
 	ShowDialog = true;
 }
 
 void high_score::show_and_set_high_score_dialog(high_score_entry score)
 {
+	miyoo_state::NormalHeap miyooHeap; // Miyoo Mini patch: never in a save state
 	ScoreQueue.insert(ScoreQueue.begin(), score);
 	ShowDialog = true;
 }
@@ -173,6 +180,7 @@ int high_score::MiyooOverlayVersion()
 
 void high_score::MiyooKeyDown(int sym)
 {
+	miyoo_state::NormalHeap miyooHeap; // Miyoo Mini patch: never in a save state
 	if (!MiyooOpen)
 		return; // the table opens on the next frame
 	MiyooVersion++;
@@ -298,6 +306,7 @@ static void MiyooRect(gdrv_bitmap8* dst, int x, int y, int w, int h, ColorRgba c
 
 void high_score::MiyooDrawOverlay()
 {
+	miyoo_state::NormalHeap miyooHeap; // Miyoo Mini patch: never in a save state
 	if (!MiyooOpen || !score::msg_fontp || !render::vscreen)
 		return;
 
@@ -447,6 +456,7 @@ void high_score::MiyooDrawOverlay()
 
 void high_score::RenderHighScoreDialog()
 {
+	miyoo_state::NormalHeap miyooHeap; // Miyoo Mini patch: never in a save state
 	// Miyoo Mini patch: replaces the original ImGui window (it does not show
 	// up on this device). Same logic: scores waiting in ScoreQueue are asked
 	// one at a time; with an empty queue it only shows the table.

@@ -12,46 +12,10 @@
 #include "translations.h"
 #include "font_selection.h"
 
-// Miyoo Mini patch: Menu key combos. The Menu key quits when released, unless
-// another button was pressed while it was held: Menu+Start toggles the demo
-// (the computer plays by itself), and Menu+Power (OnionOS screenshot) or any
-// other combo no longer quits the game. Power and the volume keys never reach
-// SDL on this device, so the key devices are also read directly (reading them
-// does not take the keys away from SDL or OnionOS).
-#include <fcntl.h>
-#include <unistd.h>
-#include <linux/input.h>
-static bool MiyooMenuCombo = false;
-
-// Returns true if a button other than Menu was pressed since the last call.
-static bool MiyooOtherKeyPressed()
-{
-	static int fds[10];
-	static bool opened = false;
-	if (!opened)
-	{
-		opened = true;
-		for (int i = 0; i < 10; i++)
-		{
-			char path[32];
-			snprintf(path, sizeof path, "/dev/input/event%d", i);
-			fds[i] = open(path, O_RDONLY | O_NONBLOCK | O_CLOEXEC);
-		}
-	}
-	auto pressed = false;
-	for (auto fd : fds)
-	{
-		if (fd < 0)
-			continue;
-		input_event ev;
-		while (read(fd, &ev, sizeof ev) == static_cast<ssize_t>(sizeof ev))
-		{
-			if (ev.type == EV_KEY && ev.value == 1 && ev.code != KEY_ESC)
-				pressed = true;
-		}
-	}
-	return pressed;
-}
+// Miyoo Mini patch: the MENU key (Game Switcher, back to the menu, previous game,
+// and Menu+Start's demo staying a combo), save states and the save at power-off:
+// see miyoo_state.cpp.
+#include "miyoo_state.h"
 
 constexpr const char* winmain::Version;
 
@@ -96,6 +60,7 @@ int winmain::CursorIdleCounter = 0;
 int winmain::WinMain(LPCSTR lpCmdLine)
 {
 	std::set_new_handler(memalloc_failure);
+	miyoo_state::Init(); // Miyoo Mini patch: before SDL_Init
 
 	printf("Game version: %s\n", Version);
 	printf("Command line: %s\n", lpCmdLine);
@@ -266,6 +231,7 @@ int winmain::WinMain(LPCSTR lpCmdLine)
 		if (!midi::music_init(mixOpened, Options.MusicVolume))
 			Options.Music = false;
 
+		miyoo_state::HeapOn(); // Miyoo Mini patch: the table's memory, from here on
 		if (pb::init())
 		{
 			std::string message = "The .dat file is missing.\n"
@@ -299,12 +265,17 @@ int winmain::WinMain(LPCSTR lpCmdLine)
 		SDL_ShowWindow(window);
 		fullscrn::set_screen_mode(Options.FullScreen);
 
-		if (strstr(lpCmdLine, "-demo"))
+		// Miyoo Mini patch: opened by the Game Switcher (or after a power-off in the
+		// game), the game goes on from where it was
+		if (miyoo_state::ResumePending() && miyoo_state::Resume())
+			;
+		else if (strstr(lpCmdLine, "-demo"))
 			pb::toggle_demo();
 		else
 			pb::replay_level(false);
 
 		MainLoop();
+		miyoo_state::Shutdown();
 
 		options::uninit();
 		midi::music_shutdown();
@@ -344,6 +315,8 @@ void winmain::MainLoop()
 
 	while (true)
 	{
+		miyoo_state::Poll(); // Miyoo Mini patch: MENU, power-off (between frames)
+
 		if (DispFrameRate)
 		{
 			auto curTime = Clock::now();
@@ -948,7 +921,10 @@ int winmain::event_handler(const SDL_Event* event)
 			{
 				auto sym = event->key.keysym.sym;
 				if (!event->key.repeat)
+				{
+					miyoo_state::NormalHeap miyooHeap;
 					MiyooSwallowedUps.push_back(sym);
+				}
 				if (!event->key.repeat || sym == SDLK_UP || sym == SDLK_DOWN)
 					high_score::MiyooKeyDown(sym);
 				return 1;
@@ -1031,44 +1007,32 @@ int winmain::event_handler(const SDL_Event* event)
 		return_value = 0;
 		return 0;
 	case SDL_KEYUP:
+		// Miyoo Mini patch: MENU is handled by miyoo_state::Poll (it reads the
+		// keys itself, for its timing and the keys SDL never sees, as Power)
 		if (event->key.keysym.sym == SDLK_ESCAPE)
-		{
-			// Miyoo Mini patch: no quitting after a Menu combo (Menu+Start,
-			// Menu+Power screenshot...)
-			if (MiyooOtherKeyPressed())
-				MiyooMenuCombo = true;
-			if (MiyooMenuCombo)
-				break;
-			SDL_Event quitEvent{SDL_QUIT};
-			SDL_PushEvent(&quitEvent);
 			break;
-		}
 		pb::InputUp({InputTypes::Keyboard, miyooRemapKeycode(event->key.keysym.sym)});
 		break;
 	case SDL_KEYDOWN:
 		if (event->key.repeat)
 			break;
 
-		// Menu key quits, but only once it is released (see SDL_KEYUP
-		// above). Swallow the key press so it does not reach the game,
-		// where Escape would pause instead.
+		// Miyoo Mini patch: MENU is handled by miyoo_state::Poll. Swallow the key
+		// press so it does not reach the game, where Escape would pause instead.
 		if (event->key.keysym.sym == SDLK_ESCAPE)
-		{
-			// Miyoo Mini patch: start watching for a Menu combo
-			MiyooOtherKeyPressed(); // forget older presses
-			MiyooMenuCombo = false;
 			break;
-		}
 
-		// Miyoo Mini patch: a button pressed while Menu is held is a combo, so
-		// releasing Menu will not quit. Menu+Start toggles the demo mode, and
-		// that Start is not seen by the game (it would pause it).
+		// Miyoo Mini patch: a button pressed while Menu is held is a combo (MENU
+		// then does nothing when released). Menu+Start toggles the demo mode,
+		// and that Start is not seen by the game (it would pause it).
 		if (SDL_GetKeyboardState(nullptr)[SDL_SCANCODE_ESCAPE])
 		{
-			MiyooMenuCombo = true;
 			if (event->key.keysym.sym == SDLK_RETURN)
 			{
-				MiyooSwallowedUps.push_back(SDLK_RETURN);
+				{
+					miyoo_state::NormalHeap miyooHeap;
+					MiyooSwallowedUps.push_back(SDLK_RETURN);
+				}
 				end_pause();
 				pb::toggle_demo();
 				break;

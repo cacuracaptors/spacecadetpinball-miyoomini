@@ -493,7 +493,7 @@ void pb::pause_continue()
 		if (MainTable)
 			MainTable->Message(MessageCode::Pause, time_now);
 		InfoTextBox->Display(get_rc_string(Msg::STRING123), -1.0);
-		midi::music_stop();
+		midi::music_pause(); // Miyoo Mini patch: goes on from the same point
 		Sound::Deactivate();
 	}
 	else
@@ -517,7 +517,7 @@ void pb::pause_continue()
 			InfoTextBox->Display(text, textTime);
 		}
 		if (options::Options.Music && !winmain::single_step)
-			midi::music_play();
+			midi::music_resume(); // Miyoo Mini patch
 		Sound::Activate();
 	}
 }

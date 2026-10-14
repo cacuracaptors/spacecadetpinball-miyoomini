@@ -3,6 +3,8 @@
 
 
 #include "pb.h"
+#include "options.h"
+#include "winmain.h"
 
 
 std::vector<Mix_Music*> midi::LoadedTracks{};
@@ -10,6 +12,7 @@ Mix_Music* midi::track1, * midi::track2, * midi::track3;
 MidiTracks midi::active_track, midi::NextTrack;
 int midi::Volume = MIX_MAX_VOLUME;
 bool midi::IsPlaying = false, midi::MixOpen = false;
+bool midi::Paused = false; // Miyoo Mini patch
 
 constexpr uint32_t FOURCC(uint8_t a, uint8_t b, uint8_t c, uint8_t d)
 {
@@ -33,6 +36,10 @@ int ToVariableLen(uint32_t value, uint32_t& dst)
 
 void midi::music_play()
 {
+	// Miyoo Mini patch: the music waits while the game is paused (music turned
+	// on in the pause starts when the game goes on)
+	if (winmain::single_step)
+		return;
 	if (!IsPlaying)
 	{
 		IsPlaying = true;
@@ -53,11 +60,90 @@ void midi::music_stop()
 
 void midi::StopPlayback()
 {
+	Paused = false; // Miyoo Mini patch
 	if (active_track != MidiTracks::None)
 	{
 		if (MixOpen)
 			Mix_HaltMusic();
 		active_track = MidiTracks::None;
+	}
+}
+
+// Miyoo Mini patch: the game's pause pauses the music, which goes on from the
+// same point when the game does (the original stopped it and started it over).
+void midi::music_pause()
+{
+	if (IsPlaying && active_track != MidiTracks::None && MixOpen && !Paused)
+	{
+		Mix_PauseMusic();
+		Paused = true;
+	}
+	else if (!Paused)
+	{
+		music_stop();
+	}
+}
+
+void midi::music_resume()
+{
+	if (Paused)
+	{
+		Paused = false;
+		if (MixOpen)
+			Mix_ResumeMusic();
+	}
+	else
+	{
+		music_play();
+	}
+}
+
+// Mix_GetMusicPosition is SDL_mixer 2.6's (the device has it); taken at run time,
+// so the port also builds with older SDL_mixer headers.
+static double MiyooMusicPosition(Mix_Music* music)
+{
+	typedef double (SDLCALL *PositionFunc)(Mix_Music*);
+	static PositionFunc func;
+	static bool looked;
+	if (!looked)
+	{
+		looked = true;
+		auto lib = SDL_LoadObject("libSDL2_mixer-2.0.so.0");
+		if (lib)
+			func = reinterpret_cast<PositionFunc>(SDL_LoadFunction(lib, "Mix_GetMusicPosition"));
+	}
+	if (!func || !music)
+		return 0.0;
+	auto pos = func(music);
+	return pos > 0.0 ? pos : 0.0;
+}
+
+void midi::MiyooGetState(int& track, double& position, bool& playing)
+{
+	track = static_cast<int>(get_active_track());
+	playing = IsPlaying && active_track != MidiTracks::None;
+	position = playing && MixOpen ? MiyooMusicPosition(TrackToMidi(active_track)) : 0.0;
+}
+
+void midi::MiyooRestoreState(int track, double position, bool playing, bool paused)
+{
+	StopPlayback();
+	IsPlaying = false;
+	active_track = MidiTracks::None;
+	NextTrack = static_cast<MidiTracks>(track);
+	if (!playing || !options::Options.Music || NextTrack == MidiTracks::None)
+		return;
+	IsPlaying = true;
+	play_track(NextTrack, true);
+	NextTrack = MidiTracks::None;
+	if (active_track == MidiTracks::None)
+		return;
+	if (position > 0.0)
+		Mix_SetMusicPosition(position);
+	if (paused)
+	{
+		Mix_PauseMusic();
+		Paused = true;
 	}
 }
 

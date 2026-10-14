@@ -101,7 +101,15 @@ public:
 	static void SetVolume(int volume);
 	static bool play_track(MidiTracks track, bool replay);
 	static MidiTracks get_active_track();
+
+	// Miyoo Mini patch: the game's pause keeps the music where it was (the original
+	// stopped it and started it over), and a save state keeps its track and position.
+	static void music_pause();
+	static void music_resume();
+	static void MiyooGetState(int& track, double& position, bool& playing);
+	static void MiyooRestoreState(int track, double position, bool playing, bool paused);
 private:
+	static bool Paused;
 	static std::vector<Mix_Music*> LoadedTracks;
 	static Mix_Music* track1, * track2, * track3;
 	static MidiTracks active_track, NextTrack;

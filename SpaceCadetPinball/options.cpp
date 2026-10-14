@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "options.h"
+#include "miyoo_state.h"
 
 #include "fullscrn.h"
 #include "midi.h"
@@ -465,6 +466,7 @@ void options::ResetAllOptions()
 
 void options::MyUserData_ReadLine(ImGuiContext* ctx, ImGuiSettingsHandler* handler, void* entry, const char* line)
 {
+	miyoo_state::NormalHeap miyooHeap; // Miyoo Mini patch: never in a save state
 	auto& keyValueStore = *static_cast<std::unordered_map<std::string, std::string>*>(entry);
 	std::string keyValue = line;
 	auto separatorPos = keyValue.find('=');
@@ -478,12 +480,14 @@ void options::MyUserData_ReadLine(ImGuiContext* ctx, ImGuiSettingsHandler* handl
 
 void* options::MyUserData_ReadOpen(ImGuiContext* ctx, ImGuiSettingsHandler* handler, const char* name)
 {
+	miyoo_state::NormalHeap miyooHeap; // Miyoo Mini patch: never in a save state
 	// There is only one custom entry
 	return strcmp(name, "Settings") == 0 ? &settings : nullptr;
 }
 
 void options::MyUserData_WriteAll(ImGuiContext* ctx, ImGuiSettingsHandler* handler, ImGuiTextBuffer* buf)
 {
+	miyoo_state::NormalHeap miyooHeap; // Miyoo Mini patch: never in a save state
 	buf->appendf("[%s][%s]\n", handler->TypeName, "Settings");
 	for (const auto& setting : settings)
 	{
@@ -592,6 +596,7 @@ std::string GameInput::GetShortInputDescription() const
 
 const std::string& options::GetSetting(const std::string& key, const std::string& defaultValue)
 {
+	miyoo_state::NormalHeap miyooHeap; // Miyoo Mini patch: never in a save state
 	auto setting = settings.find(key);
 	if (setting == settings.end())
 	{
@@ -605,6 +610,7 @@ const std::string& options::GetSetting(const std::string& key, const std::string
 
 void options::SetSetting(const std::string& key, const std::string& value)
 {
+	miyoo_state::NormalHeap miyooHeap; // Miyoo Mini patch: never in a save state
 	settings[key] = value;
 	if (ImGui::GetCurrentContext())
 		ImGui::MarkIniSettingsDirty();

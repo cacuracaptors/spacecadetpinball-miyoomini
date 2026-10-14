@@ -186,6 +186,10 @@ set(SOURCE_FILES
         SpaceCadetPinball/imstb_truetype.h
         SpaceCadetPinball/DebugOverlay.cpp
         SpaceCadetPinball/DebugOverlay.h
+        SpaceCadetPinball/miyoo_state.cpp
+        SpaceCadetPinball/miyoo_state.h
+        SpaceCadetPinball/tlsf.c
+        SpaceCadetPinball/tlsf.h
         )
 
 # On Windows, include resource file with the icon
@@ -206,6 +210,7 @@ set_source_files_properties(
         SpaceCadetPinball/imgui_demo.cpp
         SpaceCadetPinball/imgui_impl_sdl.cpp
         SpaceCadetPinball/imgui_impl_sdlrenderer.cpp
+        SpaceCadetPinball/tlsf.c
         PROPERTIES SKIP_PRECOMPILE_HEADERS 1
 )
 
@@ -217,6 +222,12 @@ if(${CMAKE_VERSION} VERSION_GREATER "3.16.0" OR ${CMAKE_VERSION} VERSION_EQUAL "
 endif()
 
 target_link_libraries(SpaceCadetPinball ${SDL2_LIBRARY} ${SDL2_MIXER_LIBRARY})
+
+# Miyoo Mini port: save states need the table's static variables in one block
+# (see SpaceCadetPinball/miyoo_state.cpp and miyoo_state.ld).
+if(UNIX AND NOT APPLE)
+    target_link_libraries(SpaceCadetPinball "-Wl,-T,${CMAKE_CURRENT_LIST_DIR}/SpaceCadetPinball/miyoo_state.ld")
+endif()
 
 # On Windows, copy DLL to output
 if(WIN32)

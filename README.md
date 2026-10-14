@@ -35,8 +35,14 @@ legitimate copy of these files and must provide them yourself. See [Installation
   when you set a new record (see [High Scores](#high-scores))
 - **Demo mode**: press Menu+Start and the computer plays by itself, for when you just want to
   watch (Menu+Start again, or Select, to stop)
-- The Menu key quits when **released**, and only if no other button was pressed while it was
-  held, so Menu+Start and the OnionOS Menu+Power screenshot combo don't quit the game
+- **OnionOS Game Switcher and save states**: a press of the Menu key saves the game and opens
+  the Game Switcher, and the game goes on from exactly where it was, ball, score and music
+  included (see [Game Switcher and save states](#game-switcher-and-save-states))
+- **Save at power-off**: turn the device off in the middle of a game, and it goes on from
+  where it was when you turn it back on
+- **Pausing keeps the music where it was** (the original started it over)
+- Menu with another button (Menu+Start, the OnionOS Menu+Power screenshot) does nothing else,
+  so it never leaves the game
 
 ## Controls
 
@@ -53,8 +59,13 @@ legitimate copy of these files and must provide them yourself. See [Installation
 | Y                   | Toggle music           |
 | Start               | Pause / Resume         |
 | Select              | New game               |
-| Menu key (Function) | Exit the game          |
+| Menu key (press)    | Game Switcher (saves)  |
+| Menu key (hold)     | OnionOS menu (saves)   |
 | Menu + Start        | Demo mode (on / off)   |
+
+The Menu key does what OnionOS's **Tweaks > Shortcuts > "In-game: Menu button"** sets for a
+press, a long press and a double press, the same as in RetroArch (the above is OnionOS's
+default; a double press goes to the previous game).
 
 ## High Scores
 
@@ -80,6 +91,28 @@ draws the table by itself, with the game's own font.
   works on it.
 - Your scores live in `Roms/PORTS/Games/Pinball/.local/share/SpaceCadetPinball/imgui_pb.ini`.
   Keep that file (or the whole `.local` folder) when you update or reinstall the port.
+
+## Game Switcher and save states
+
+The port works with OnionOS's Game Switcher the way RetroArch games do:
+
+- **Menu (press)**: the game is saved and the Game Switcher opens, with a picture of the table.
+  Pick 3D Pinball there and the game goes on from exactly where it was: the ball, the score,
+  the lights and missions, a pause, the demo, and the music at the same point.
+- **Menu (hold)**: the game is saved and you go back to the OnionOS menu. Opened again from the
+  Game Switcher, it goes on from there; opened from the game list, a new game starts.
+- **Turning the device off** in the middle of a game saves it (OnionOS waits for it), and the
+  game opens by itself and goes on from where it was when the device is turned back on (unless
+  you hold Menu while it starts, as usual in OnionOS). If you were typing a name for a new
+  record, the record is kept with the name as it was.
+- What a press, a long press and a double press of Menu do follows OnionOS's **Tweaks >
+  Shortcuts > "In-game: Menu button"**, so it is the same as in your other games.
+- Your High Scores and settings are not part of a saved game: going back to one never takes
+  them back in time.
+- The saved game is `Roms/PORTS/Games/Pinball/saves/state_auto.pbs`. It belongs to the version
+  of the port that wrote it: after you update the port, the first time a new game starts.
+- `state_log.txt`, in the same folder, notes every save and load (useful when reporting a
+  problem).
 
 ## Music
 
@@ -136,6 +169,13 @@ Some notes:
 
 ## Changelog
 
+- **v1.4.0** — **OnionOS Game Switcher and save states**: a press of the Menu key saves the
+  game and opens the Game Switcher (holding it goes back to the OnionOS menu, also saving), and
+  the game goes on from exactly where it was, ball, score and music included. **Save at
+  power-off**: turned off in the middle of a game, it goes on from there at the next start. The
+  Menu key follows OnionOS's Tweaks setting for a press, a long press and a double press.
+  **Pausing keeps the music where it was** instead of starting it over. See
+  [Game Switcher and save states](#game-switcher-and-save-states).
 - **v1.3.0** — **Demo mode**: Menu+Start makes the computer play by itself (Menu+Start again,
   or Select, to stop). The Menu key no longer quits the game when another button was pressed
   while it was held, so the OnionOS Menu+Power screenshot combo works during play. The right
@@ -237,11 +277,29 @@ rather than for ARM, since it runs during the build itself.
 - **`SpaceCadetPinball/winmain.cpp`** — the full physical-button-to-game-action remapping
   (`miyooRemapKeycode()`), translating this device's fixed hardware→keycode mapping onto the
   game's existing keyboard-based control scheme, plus a direct-quit shortcut bypassing a broken
-  ImGui confirmation dialog on this hardware (see Known issues). The Menu key's quit fires on key
-  release rather than key press, and not at all if another button was pressed while it was held
-  (Power and the volume keys never reach SDL on this device, so `/dev/input/event*` is also read
-  while Menu is held). Menu+Start toggles the demo mode (`pb::toggle_demo()`, the PC menu's
-  Demo).
+  ImGui confirmation dialog on this hardware (see Known issues). Menu+Start toggles the demo mode
+  (`pb::toggle_demo()`, the PC menu's Demo). It calls `miyoo_state` at the start, before the
+  table is built (`HeapOn`), to resume a saved game instead of starting a new one, and once per
+  main loop pass (`Poll`).
+- **`SpaceCadetPinball/miyoo_state.cpp` / `.h` / `.ld`** (new) — save states, OnionOS's
+  Game Switcher and the save at power-off, modelled on this author's Mario Kart 64 port. From
+  `pb::init()` on, the game's C++ memory (`operator new`) comes from a heap of its own, a
+  [TLSF](https://github.com/mattconte/tlsf) pool at a fixed address, and `miyoo_state.ld` gathers
+  the static variables of the table's code into one block; a state is those two, compressed
+  with the device's zlib. The executable is not position independent, so everything sits at the
+  same addresses in every run, and a state is refused by any other build. The settings, the
+  High Scores and the buttons use the normal heap (`miyoo_state::NormalHeap`, in
+  `options.cpp`, `high_score.cpp` and `winmain.cpp`), and the SDL objects the table points to
+  (the screen texture, the sound effects) are kept from the running game across a load. The
+  Menu key is read from `/dev/input/event*` and timed as OnionOS's keymon times it for
+  RetroArch, following `config/keymap.json`; the Game Switcher's picture, the recent list, the
+  power-off order (`/tmp/.offOrder`, SIGTERM) and `cmd_to_run.sh` are handled as OnionOS does
+  for RetroArch.
+- **`SpaceCadetPinball/midi.cpp` / `midi.h`, `pb.cpp`** — the game's pause pauses the music
+  (`Mix_PauseMusic`) instead of stopping it, and a save state records the track and its
+  position.
+- **`SpaceCadetPinball/tlsf.c` / `tlsf.h`** (new) — Matthew Conte's TLSF allocator (BSD
+  license), as published.
 - **`SpaceCadetPinball/translations.cpp`** — the English right-panel messages name the Miyoo
   buttons instead of PC keys: "Game Paused / Press Start" (was F3) and "Select Starts New Game"
   (was F2).
@@ -274,11 +332,15 @@ rather than for ARM, since it runs during the build itself.
 - [TiMidity++](https://sourceforge.net/projects/timidity/) — MIDI to audio conversion (GPL)
 - [GeneralUser GS](https://github.com/mrbumpy409/GeneralUser-GS) by S. Christian Collins — the
   soundfont used for the conversion
+- [Matthew Conte](https://github.com/mattconte/tlsf) — TLSF, the memory allocator behind the
+  save states (BSD license)
 - Cinematronics / Maxis / Microsoft — the original 3D Pinball for Windows – Space Cadet (1995)
 
 ## License
 
 This port's source code follows the same license as upstream SpaceCadetPinball. See `LICENSE` in this repository.
+`SpaceCadetPinball/tlsf.c` and `tlsf.h` are Matthew Conte's, under the BSD license written at the
+top of those files.
 
 The bundled TiMidity++ build is distributed under the GPL, and the GeneralUser GS soundfont under
 its own permissive license; see `midi-tool/` in the release for the accompanying license files.

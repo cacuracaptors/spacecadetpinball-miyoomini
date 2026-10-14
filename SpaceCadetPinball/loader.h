@@ -106,6 +106,13 @@ public:
 	static int16_t* query_iattribute(int groupIndex, int firstValue, int* arraySize);
 	static float play_sound(int soundIndex, TPinballComponent *soundSource, const char* info);
 	static DatFile* loader_table;
+
+	// Miyoo Mini patch: the loaded sounds (SDL_mixer's), kept across a save state load
+	static void* MiyooSoundList(size_t* size)
+	{
+		*size = sizeof sound_list;
+		return sound_list;
+	}
 private:
 	static errorMsg loader_errors[];
 	static DatFile* sound_record_table;
