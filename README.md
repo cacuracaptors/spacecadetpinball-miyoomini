@@ -344,3 +344,7 @@ top of those files.
 
 The bundled TiMidity++ build is distributed under the GPL, and the GeneralUser GS soundfont under
 its own permissive license; see `midi-tool/` in the release for the accompanying license files.
+
+## AI-Assisted
+
+Claude Opus 5.5 was used to write parts of the code and to speed up debugging and optimization.
