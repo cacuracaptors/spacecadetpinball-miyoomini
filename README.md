@@ -338,7 +338,8 @@ rather than for ARM, since it runs during the build itself.
 
 ## License
 
-This port's source code follows the same license as upstream SpaceCadetPinball. See `LICENSE` in this repository.
+SpaceCadetPinball and the code written for this port (the Miyoo Mini changes and files such as
+`miyoo_state.cpp`/`.h`) are under the MIT License; see `LICENSE` in this repository.
 `SpaceCadetPinball/tlsf.c` and `tlsf.h` are Matthew Conte's, under the BSD license written at the
 top of those files.
 
